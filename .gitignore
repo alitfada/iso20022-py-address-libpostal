@@ -22,3 +22,6 @@ wheels/
 # Config files
 codes_config.py
 config.py
+
+# Scratch files
+scratch*.py

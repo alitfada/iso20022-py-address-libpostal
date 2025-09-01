@@ -1,0 +1,3 @@
+XSD_FILE_PATH_STRUCTURED = r"PostalAddress24Structured.xsd"
+XSD_FILE_PATH_HYBRID = r"PostalAddress24Hybrid.xsd"
+MIN_VIABLE_ADDRESS_LENGTH = 25

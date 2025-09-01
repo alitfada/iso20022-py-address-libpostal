@@ -2,5 +2,8 @@ postal==1.1.10
 pandas>=1.5.0
 pylint>=2.15.0
 pycountry
+geonamescache
 geopy
+reverse_geocoder
 lxml
+requests

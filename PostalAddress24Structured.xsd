@@ -1,0 +1,111 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- edited with XMLSpy v2018 sp1 (x64) (http://www.altova.com) by Dominic Digby (Affinis) -->
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" elementFormDefault="qualified" attributeFormDefault="unqualified">
+	<xs:element name="PstlAdr" type="PostalAddress24">
+		<xs:annotation>
+			<xs:documentation>Comment describing your root element</xs:documentation>
+		</xs:annotation>
+	</xs:element>
+	<xs:complexType name="AddressType3Choice">
+		<xs:choice>
+			<xs:element name="Cd" type="AddressType2Code"/>
+			<xs:element name="Prtry" type="GenericIdentification30"/>
+		</xs:choice>
+	</xs:complexType>
+	<xs:simpleType name="AddressType2Code">
+		<xs:restriction base="xs:string">
+			<xs:enumeration value="ADDR"/>
+			<xs:enumeration value="PBOX"/>
+			<xs:enumeration value="HOME"/>
+			<xs:enumeration value="BIZZ"/>
+			<xs:enumeration value="MLTO"/>
+			<xs:enumeration value="DLVY"/>
+		</xs:restriction>
+	</xs:simpleType>
+	<xs:complexType name="GenericIdentification30">
+		<xs:sequence>
+			<xs:element name="Id" type="Exact4AlphaNumericText"/>
+			<xs:element name="Issr" type="Max35Text"/>
+			<xs:element name="SchmeNm" type="Max35Text" minOccurs="0"/>
+		</xs:sequence>
+	</xs:complexType>
+	<xs:simpleType name="CBPR_RestrictedFINXMax16Text_Extended">
+		<xs:annotation>
+			<xs:documentation source="Name" xml:lang="EN">CBPR_RestrictedFINXMax16Text_Extended</xs:documentation>
+			<xs:documentation source="Definition" xml:lang="EN">Specifies a character string with a minimum length of 1, and a maximum length of 16 characters, and limited to character set X, that is, 0-9 a-z A-Z / - ? : ( ) . , ' + . that is extended to support the following additional characters !#$%&amp;*=^_`{|}~";&lt;&gt;@[\]</xs:documentation>
+		</xs:annotation>
+		<xs:restriction base="xs:string">
+			<xs:minLength value="1"/>
+			<xs:maxLength value="16"/>
+			<xs:pattern value="[0-9a-zA-Z/\-\?:\(\)\.,'\+ !#$%&amp;\*=^_`\{\|\}~&quot;;&lt;&gt;@\[\\\]]+"/>
+		</xs:restriction>
+	</xs:simpleType>
+	<xs:simpleType name="CBPR_RestrictedFINXMax35Text_Extended">
+		<xs:annotation>
+			<xs:documentation source="Name" xml:lang="EN">CBPR_RestrictedFINXMax35Text_Extended</xs:documentation>
+			<xs:documentation source="Definition" xml:lang="EN">Specifies a character string with a minimum length of 1, and a maximum length of 35 characters, and limited to character set X, that is, 0-9 a-z A-Z / - ? : ( ) . , ' + . that is extended to support the following additional characters !#$%&amp;*=^_`{|}~";&lt;&gt;@[\]</xs:documentation>
+		</xs:annotation>
+		<xs:restriction base="xs:string">
+			<xs:minLength value="1"/>
+			<xs:maxLength value="35"/>
+			<xs:pattern value="[0-9a-zA-Z/\-\?:\(\)\.,'\+ !#$%&amp;\*=^_`\{\|\}~&quot;;&lt;&gt;@\[\\\]]+"/>
+		</xs:restriction>
+	</xs:simpleType>
+	<xs:simpleType name="CBPR_RestrictedFINXMax70Text_Extended">
+		<xs:annotation>
+			<xs:documentation source="Name" xml:lang="EN">CBPR_RestrictedFINXMax70Text_Extended</xs:documentation>
+			<xs:documentation source="Definition" xml:lang="EN">Specifies a character string with a minimum length of 1, and a maximum length of 70 characters, and limited to character set X, that is, 0-9 a-z A-Z / - ? : ( ) . , ' + . that is extended to support the following additional characters !#$%&amp;*=^_`{|}~";&lt;&gt;@[\]</xs:documentation>
+		</xs:annotation>
+		<xs:restriction base="xs:string">
+			<xs:minLength value="1"/>
+			<xs:maxLength value="70"/>
+			<xs:pattern value="[0-9a-zA-Z/\-\?:\(\)\.,'\+ !#$%&amp;\*=^_`\{\|\}~&quot;;&lt;&gt;@\[\\\]]+"/>
+		</xs:restriction>
+	</xs:simpleType>
+	<xs:simpleType name="Max70Text">
+		<xs:restriction base="xs:string">
+			<xs:minLength value="1"/>
+			<xs:maxLength value="70"/>
+		</xs:restriction>
+	</xs:simpleType>
+	<xs:simpleType name="Max16Text">
+		<xs:restriction base="xs:string">
+			<xs:minLength value="1"/>
+			<xs:maxLength value="16"/>
+		</xs:restriction>
+	</xs:simpleType>
+	<xs:simpleType name="Max35Text">
+		<xs:restriction base="xs:string">
+			<xs:minLength value="1"/>
+			<xs:maxLength value="35"/>
+		</xs:restriction>
+	</xs:simpleType>
+	<xs:simpleType name="Exact4AlphaNumericText">
+		<xs:restriction base="xs:string">
+			<xs:pattern value="[a-zA-Z0-9]{4}"/>
+		</xs:restriction>
+	</xs:simpleType>
+	<xs:simpleType name="CountryCode">
+		<xs:restriction base="xs:string">
+			<xs:pattern value="[A-Z]{2,2}"/>
+		</xs:restriction>
+	</xs:simpleType>
+	<xs:complexType name="PostalAddress24">
+		<xs:sequence>
+			<xs:element name="Dept" type="CBPR_RestrictedFINXMax70Text_Extended" minOccurs="0"/>
+			<xs:element name="SubDept" type="CBPR_RestrictedFINXMax70Text_Extended" minOccurs="0"/>
+			<xs:element name="StrtNm" type="CBPR_RestrictedFINXMax70Text_Extended" minOccurs="0"/>
+			<xs:element name="BldgNb" type="CBPR_RestrictedFINXMax16Text_Extended" minOccurs="0"/>
+			<xs:element name="BldgNm" type="CBPR_RestrictedFINXMax35Text_Extended" minOccurs="0"/>
+			<xs:element name="Flr" type="CBPR_RestrictedFINXMax70Text_Extended" minOccurs="0"/>
+			<xs:element name="PstBx" type="CBPR_RestrictedFINXMax16Text_Extended" minOccurs="0"/>
+			<xs:element name="Room" type="CBPR_RestrictedFINXMax70Text_Extended" minOccurs="0"/>
+			<xs:element name="PstCd" type="CBPR_RestrictedFINXMax16Text_Extended" minOccurs="0"/>
+			<xs:element name="TwnNm" type="CBPR_RestrictedFINXMax35Text_Extended"/>
+			<xs:element name="TwnLctnNm" type="CBPR_RestrictedFINXMax35Text_Extended" minOccurs="0"/>
+			<xs:element name="DstrctNm" type="CBPR_RestrictedFINXMax35Text_Extended" minOccurs="0"/>
+			<xs:element name="CtrySubDvsn" type="CBPR_RestrictedFINXMax35Text_Extended" minOccurs="0"/>
+			<xs:element name="Ctry" type="CountryCode"/>
+		</xs:sequence>
+	</xs:complexType>
+</xs:schema>
