@@ -124,7 +124,9 @@ class AddressProcessor:
                         continue
 
                     try:
-                        logger.info("Line %s processing", line_num)
+                        msg = f"Line {line_num} processing"
+                        logger.info(msg)
+                        print(msg)
                         # Preserve original for length check
                         original_line = line
                         # Only strip newline

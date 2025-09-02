@@ -5,7 +5,8 @@ Dependencies:
 pip install pycountry geopy requests
 """
 import time
-from typing import Dict, Tuple, Optional, Any, List
+import re
+from typing import Dict, Set, Tuple, Optional, Any, List
 from dataclasses import dataclass
 import requests
 import pycountry
@@ -39,8 +40,8 @@ class AddressEnricher:
     Address enrichment class using Nominatim geocoding and pycountry for standardization.
     """
 
-    def __init__(self, user_agent: str = "address_enricher",
-                 timeout: int = 10, delay: float = 1.5, prefer_latin: bool = True,
+    def __init__(self, user_agent: str = "affinis_address_enricher",
+                 timeout: int = 10, delay: float = 1.0, prefer_latin: bool = True,
                  base_url: str = "https://nominatim.openstreetmap.org"):
         """
         Initialize the address enricher.
@@ -57,6 +58,10 @@ class AddressEnricher:
         self._last_request_time = 0
         self.base_url = base_url
         self.user_agent = user_agent
+        # Get valid ISO 3166-1 alpha-2 country codes from pycountry
+        self.valid_country_codes: Set[str] = {
+            country.alpha_2 for country in pycountry.countries
+        }
 
 
     def _rate_limit(self):
@@ -83,10 +88,10 @@ class AddressEnricher:
         Returns:
             List of AddressComponents objects (single item if return_all_candidates=False)
         """
-        
+
         # Respect rate limiting (max 1 request per second)
         self._rate_limit()
-        
+
         params = {
             'q': address,
             'format': 'json',
@@ -106,9 +111,9 @@ class AddressEnricher:
 
         try:
             print(f"Searching Nominatim for: {address}")
-            response = requests.get(f"{self.base_url}/search", 
-                                  params=params, 
-                                  headers=headers, 
+            response = requests.get(f"{self.base_url}/search",
+                                  params=params,
+                                  headers=headers,
                                   timeout=10)
             response.raise_for_status()
             data = response.json()
@@ -155,16 +160,16 @@ class AddressEnricher:
         headers = {'User-Agent': self.user_agent}
 
         try:
-            print("Trying fallback search without country restriction...")
-            response = requests.get(f"{self.base_url}/search", 
-                                  params=params, 
-                                  headers=headers, 
+            logger.info("Trying fallback search without country restriction...")
+            response = requests.get(f"{self.base_url}/search",
+                                  params=params,
+                                  headers=headers,
                                   timeout=10)
             response.raise_for_status()
             data = response.json()
 
             if data:
-                print(f"Fallback found {len(data)} candidates")
+                logger.info("Fallback found %s candidates", len(data))
                 candidates = []
                 for result in data:
                     components = self._extract_components(result)
@@ -386,6 +391,14 @@ class AddressEnricher:
             # This part of the code is generally safe, but a LookupError could occur.
             pass
 
+        # Check is a multi-label country, i.e. name and code (e.g. Italy IT)
+        try:
+            found_code = self._extract_country_code_from_multilabel(normalised_name)
+            if found_code:
+                return found_code
+        except Exception:
+            pass
+
         # 2. As a fallback, use the robust `search_fuzzy` method.
         try:
             matches = pycountry.countries.search_fuzzy(normalised_name)
@@ -403,6 +416,42 @@ class AddressEnricher:
 
         # If no match is found after all attempts, return None.
         logger.info("No country code found for '%s'", name)
+
+        return None
+
+
+    def _extract_country_code_from_multilabel(self, text: str) -> Optional[str]:
+        """
+        Extract a 2-character country code from a text string.
+        
+        Args:
+            text (str): Input string containing multi labels 
+            such as country name and code
+            
+        Returns:
+            Optional[str]: The 2-character country code in uppercase, or None if not found
+        """
+        text = text.strip().upper()
+
+        # Method 1: Look for valid 2-letter codes at word boundaries
+        # handles cases like "USA US", "Czech Republic CZ"
+        pattern = r'\b([A-Z]{2})\b'
+        matches = re.findall(pattern, text)
+
+        # Filter matches to only valid country codes
+        valid_matches = [match for match in matches if match in self.valid_country_codes]
+
+        if valid_matches:
+            # Return the last valid match (assuming it's at the end)
+            return valid_matches[-1]
+
+        # Method 2: Look for 2-letter codes at the end of the string
+        # This handles edge cases where there might be no word boundary
+        end_pattern = r'([A-Z]{2})$'
+        end_match = re.search(end_pattern, text)
+
+        if end_match and end_match.group(1) in self.valid_country_codes:
+            return end_match.group(1)
 
         return None
 
@@ -522,26 +571,6 @@ class AddressEnricher:
         return None
 
 
-class CoordinateCountryDetector:
-    """
-    Converts address to coordinates, then uses reverse geocoding to get country.
-    This two-step method is usually better than direct address geocoding but we use it here as
-    a fallback if the get_country
-    """
-
-    def __init__(self, rate_limit_delay: float = 1.0):
-        self.rate_limit_delay = rate_limit_delay
-        self.last_request_time = 0
-
-    def _rate_limit(self):
-        """Enforce rate limiting between requests"""
-        current_time = time.time()
-        time_since_last = current_time - self.last_request_time
-        if time_since_last < self.rate_limit_delay:
-            time.sleep(self.rate_limit_delay - time_since_last)
-        self.last_request_time = time.time()
-
-
     def address_to_coordinates_nominatim(self, address: str) -> Optional[Tuple[float, float]]:
         """
         Convert address to lat/lng coordinates using Nominatim
@@ -555,14 +584,14 @@ class CoordinateCountryDetector:
         try:
             self._rate_limit()
 
-            url = "https://nominatim.openstreetmap.org/search"
+            url = f"{self.base_url.rstrip('/')}/search"
             params = {
                 'q': address,
                 'format': 'json',
                 'limit': 1
             }
             headers = {
-                'User-Agent': 'Address Coordinate Converter (your-email@domain.com)'
+                'User-Agent': self.user_agent
             }
 
             response = requests.get(url, params=params, headers=headers, timeout=10)
@@ -599,7 +628,7 @@ class CoordinateCountryDetector:
         try:
             self._rate_limit()
 
-            url = "https://nominatim.openstreetmap.org/reverse"
+            url = f"{self.base_url.rstrip('/')}/reverse"
             params = {
                 'lat': lat,
                 'lon': lon,
@@ -608,7 +637,7 @@ class CoordinateCountryDetector:
                 'zoom': 10  # Country level
             }
             headers = {
-                'User-Agent': 'Address Coordinate Converter (your-email@domain.com)'
+                'User-Agent': self.user_agent
             }
 
             response = requests.get(url, params=params, headers=headers, timeout=10)
@@ -764,16 +793,6 @@ def geo_enrich_with_nominatim_parsing(
     return country_code, city, postcode, neighborhood
 
 
-def get_city_state_country_code(city_name: str) -> str | None:
-    """Returns the country code for a given city-state name.
-    Performs a case-insensitive lookup.
-    Returns None if the city-name is not found.
-    """
-    # Normalize the input to match the dictionary's key format
-    normalized_name = city_name.casefold() # or .lower()
-    return CITY_STATES.get(normalized_name)
-
-
 def enrich_address(
     address_dict: Dict[str, str],
     country_code: Optional[str] = None,
@@ -846,10 +865,8 @@ def enrich_address(
                     logger.info("Enriched missing country with '%s'", country_from_geo)
                 # Still no country, so try reverse geocodering using lat, long
                 else:
-                    detector = CoordinateCountryDetector()
-
                     # Get both coordinates and country
-                    coordinates, country_from_reverse_geo = detector.get_coordinates_and_country(search_query)
+                    coordinates, country_from_reverse_geo = enricher.get_coordinates_and_country(search_query)
                     if country_from_reverse_geo:
                         enriched_address['country'] = country_from_reverse_geo.upper()
                         country_enriched = True
@@ -858,9 +875,7 @@ def enrich_address(
                             country_from_reverse_geo)
 
             else:
-                detector = CoordinateCountryDetector()
-
-                coordinates, country_from_reverse_geo = detector.get_coordinates_and_country(search_query)
+                coordinates, country_from_reverse_geo = enricher.get_coordinates_and_country(search_query)
                 if country_from_reverse_geo:
                     enriched_address['country'] = country_from_reverse_geo
                     country_enriched = True
