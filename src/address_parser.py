@@ -80,7 +80,8 @@ class UnstructuredAddress:
         address_to_parse = ", ".join(filter(None, components))
 
         if len(address_to_parse) < MIN_VIABLE_ADDRESS_LENGTH:
-            logger.warning("Address is too short for libpostal to reliably parse")
+            logger.warning(
+                "Address is too short for libpostal to reliably parse: %s", address_to_parse)
 
         return address_to_parse
 

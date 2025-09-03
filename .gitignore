@@ -18,6 +18,7 @@ wheels/
 *.egg-info/
 .installed.cfg
 *.egg
+__pycache__/
 
 # Config files
 codes_config.py

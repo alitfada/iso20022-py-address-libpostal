@@ -12,6 +12,7 @@ import requests
 import pycountry
 from geopy.geocoders import Nominatim
 from geopy.exc import GeocoderTimedOut, GeocoderServiceError
+from helpers import remove_chars_regex
 from log_config import get_logger
 
 # Set up logging
@@ -423,36 +424,56 @@ class AddressEnricher:
     def _extract_country_code_from_multilabel(self, text: str) -> Optional[str]:
         """
         Extract a 2-character country code from a text string.
+        Handles both 2-letter (ISO alpha-2) and 3-letter (ISO alpha-3) country codes,
+        always returning the 2-letter equivalent.
         
         Args:
             text (str): Input string containing multi labels 
-            such as country name and code
+            such as country name and code (e.g. spain es, spain esp)
             
         Returns:
             Optional[str]: The 2-character country code in uppercase, or None if not found
         """
         text = text.strip().upper()
 
-        # Method 1: Look for valid 2-letter codes at word boundaries
-        # handles cases like "USA US", "Czech Republic CZ"
-        pattern = r'\b([A-Z]{2})\b'
-        matches = re.findall(pattern, text)
+        # Look for both 2-char and 3-char codes at word boundaries
+        # Priority: 2-char codes first, then 3-char codes
+        patterns = [
+            (r'\b([A-Z]{2})\b', lambda x: x if x in self.valid_country_codes else None),
+            (r'\b([A-Z]{3})\b', lambda x: self._convert_alpha3_to_alpha2(x))
+        ]
 
-        # Filter matches to only valid country codes
-        valid_matches = [match for match in matches if match in self.valid_country_codes]
+        for pattern, validator in patterns:
+            matches = re.findall(pattern, text)
+            for match in reversed(matches):  # Check from end first
+                result = validator(match)
+                if result:
+                    return result
 
-        if valid_matches:
-            # Return the last valid match (assuming it's at the end)
-            return valid_matches[-1]
+        # Check end of string patterns
+        end_patterns = [
+            (r'([A-Z]{2})$', lambda x: x if x in self.valid_country_codes else None),
+            (r'([A-Z]{3})$', lambda x: self._convert_alpha3_to_alpha2(x))
+        ]
+        
+        for pattern, validator in end_patterns:
+            match = re.search(pattern, text)
+            if match:
+                result = validator(match.group(1))
+                if result:
+                    return result
+        
+        return None
 
-        # Method 2: Look for 2-letter codes at the end of the string
-        # This handles edge cases where there might be no word boundary
-        end_pattern = r'([A-Z]{2})$'
-        end_match = re.search(end_pattern, text)
 
-        if end_match and end_match.group(1) in self.valid_country_codes:
-            return end_match.group(1)
-
+    def _convert_alpha3_to_alpha2(self, alpha3_code: str) -> Optional[str]:
+        """Helper method to convert 3-letter country code to 2-letter code."""
+        try:
+            country = pycountry.countries.get(alpha_3=alpha3_code)
+            if country and country.alpha_2 in self.valid_country_codes:
+                return country.alpha_2
+        except (AttributeError, KeyError):
+            pass
         return None
 
 
@@ -826,6 +847,9 @@ def enrich_address(
     # Handle country code conversion first (doesn't require geo enrichment)
     enricher = AddressEnricher(prefer_latin=prefer_latin_names)
     current_country = enriched_address.get('country', '').strip()
+    # Check and clean up current_country by removing non-letters
+    if current_country:
+        current_country = remove_chars_regex(current_country) # Remove any commas, periods
 
     if current_country and len(current_country) != 2:
         # If country exists but is not a 2-char code, convert it (no geo enrichment needed)
