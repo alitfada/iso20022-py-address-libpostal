@@ -850,6 +850,8 @@ def enrich_address(
     # Check and clean up current_country by removing non-letters
     if current_country:
         current_country = remove_chars_regex(current_country) # Remove any commas, periods
+        enriched_address['country'] = current_country
+        country_enriched = True
 
     if current_country and len(current_country) != 2:
         # If country exists but is not a 2-char code, convert it (no geo enrichment needed)
