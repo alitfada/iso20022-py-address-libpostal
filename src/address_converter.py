@@ -73,6 +73,7 @@ class AddressConverter:
             "AdrLine": 70,
         }
 
+
     def normalize_text(self, text: str) -> Tuple[str, bool]:
         """
         Normalize text to CBPR+ compliant format
@@ -126,6 +127,7 @@ class AddressConverter:
 
         return normalised_text, is_altered or (normalised_text != original_text)
 
+
     def truncate_field(self, text: str, max_length: int) -> Tuple[str, bool]:
         """
         Truncate text to maximum length -1 plus + char to show truncation
@@ -136,8 +138,9 @@ class AddressConverter:
 
         if len(text) > max_length:
             return text[: max_length - 1] + "+", True
-        else:
-            return text, False
+        
+        return text, False
+
 
     def get_field_length(self, field_name: str) -> int:
         """
@@ -154,9 +157,10 @@ class AddressConverter:
         else:
             return 0
 
+
     def split_address_line(
-        self, address_line: str, max_length: int
-    ) -> tuple[str, str | None, bool]:
+        self, address_line: str,
+        max_length: int) -> tuple[str, str | None, bool]:
         """
         Splits an address line if it exceeds the max permitted length characters.
 
@@ -178,6 +182,7 @@ class AddressConverter:
             address_line_2, self.max_lengths["AdrLine"]
         )
         return (address_line_1, truncated_address_line2, truncated)
+
 
     def extract_address_components(self, row: pd.Series) -> Dict[str, str]:
         """
@@ -213,6 +218,7 @@ class AddressConverter:
                 components[component] = str(row[field_name]).strip()
 
         return components
+
 
     def build_structured_address(
         self, components: Dict[str, str]

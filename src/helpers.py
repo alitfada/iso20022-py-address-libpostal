@@ -57,5 +57,5 @@ def remove_chars_regex(input_string: str) -> str:
     """
     # Remove all commas and periods using regex
     cleaned_string = re.sub(r'[,.!?]', '', input_string)
-    
+
     return cleaned_string

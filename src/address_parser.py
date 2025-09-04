@@ -10,7 +10,6 @@ from typing import Tuple, List
 from collections import defaultdict
 import libpostal_config     #do not delete, must be imported before the postal.parser below
 from postal.parser import parse_address
-#from postal.expand import expand_address
 from log_config import get_logger
 from helpers import clean_whitespace_preserve_newlines
 from config import MIN_VIABLE_ADDRESS_LENGTH
@@ -97,12 +96,14 @@ class UnstructuredAddress:
             address_str: The input string containing the address data
             allow_geo_enrichment: if True, will attempt to geo enrich if missing 
                 Town Name and Country Code plus postcode and neighborhood (city_district)
-                If false, will parse as is and return only libpostal fields
+                If False, will parse as is and return only libpostal fields
         Returns:
             raw_fields
             optimised_fields (from libpostal parsing)
+            best_address_components (from geo-enrichment)
+            city_enriched (bool if the city has been geo-enriched)
+            country_enriched (bool if the country has been geo-enriched)
         """
-
         if len(address_str) < MIN_VIABLE_ADDRESS_LENGTH:
             logger.error("Input string too short for reliable conversion")
             raise ValueError("Input string too short for reliable conversion")

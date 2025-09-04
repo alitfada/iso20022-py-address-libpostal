@@ -82,7 +82,7 @@ class AddressProcessor:
         start_row: int = 1,  # 1 assumes no header row
         allow_hybrid: bool = False,
         allow_geo_enrichment: bool = False,
-    ) -> pd.DataFrame:
+        ) -> pd.DataFrame:
         """
         Process addresses from a Text file (one address per row) each line
         until end of line is reached
@@ -159,10 +159,10 @@ class AddressProcessor:
                                 optimised_libpostal_fields,
                                 best_address_components,
                                 city_enriched,
-                                country_enriched,
+                                country_enriched
                             ) = UnstructuredAddress.parse_address(
                                 address_str=parse_line,
-                                allow_geo_enrichment=allow_geo_enrichment,
+                                allow_geo_enrichment=allow_geo_enrichment
                             )
 
                         entry = {
@@ -242,7 +242,7 @@ def get_input_parameters():
         get_wsl_path(input_file_path)
         if sys.platform.startswith("linux")
         else input_file_path
-    )
+        )
     if not input_file_path:
         print("Please enter a valid file path.")
         sys.exit(1)
@@ -261,7 +261,7 @@ def get_input_parameters():
         print("Please enter a valid folder.")
         sys.exit(1)
 
-    # Check if file exists
+    # Check if folder exists
     if not os.path.exists(output_dir):
         print(f"Folder not found: {output_dir}")
         sys.exit(1)
@@ -332,8 +332,8 @@ if __name__ == "__main__":
         params["address_type"],
         params["start_row"],
         params["allow_hybrid"],
-        params["allow_geo_enrichment"],
-    )  # Process a text file of addresses
+        params["allow_geo_enrichment"]
+        )  # Process a text file of addresses
 
     # Load the structured and hybrid address schemas to build
     # the PostalAddress24 formats and to validate against
@@ -345,8 +345,8 @@ if __name__ == "__main__":
         df=df_results,
         structured_xsd_path=STD_ADR_XSD_FILE_PATH,
         hybrid_xsd_path=HYB_ADR_XSD_FILE_PATH,
-        allow_hybrid=params["allow_hybrid"],
-    )
+        allow_hybrid=params["allow_hybrid"]
+        )
 
     # Save dataframe as csv
     # Append output file name to the directory
