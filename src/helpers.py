@@ -1,3 +1,6 @@
+"""
+General helper functions
+"""
 import re
 
 

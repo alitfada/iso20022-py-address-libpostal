@@ -455,14 +455,14 @@ class AddressEnricher:
             (r'([A-Z]{2})$', lambda x: x if x in self.valid_country_codes else None),
             (r'([A-Z]{3})$', lambda x: self._convert_alpha3_to_alpha2(x))
         ]
-        
+
         for pattern, validator in end_patterns:
             match = re.search(pattern, text)
             if match:
                 result = validator(match.group(1))
                 if result:
                     return result
-        
+
         return None
 
 
@@ -922,7 +922,15 @@ def enrich_address(
             exclude_keys=set(city_keys)
             )
         country_code_hint = enriched_address['country']
-        enriched_country_code, enriched_city, enriched_postcode, enriched_neighborhood = geo_enrich_with_nominatim_parsing(address_string=search_query, country_code_hint=country_code_hint)
+        (
+            enriched_country_code,
+            enriched_city,
+            enriched_postcode,
+            enriched_neighborhood
+            ) = geo_enrich_with_nominatim_parsing(
+                address_string=search_query,
+                country_code_hint=country_code_hint
+                )
 
         if enriched_city:
             enriched_address['city'] = enriched_city.strip()
