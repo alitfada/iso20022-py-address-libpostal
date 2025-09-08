@@ -6,7 +6,6 @@ based on the type of address.  For this Unstructured address type
 (the only type configured) it uses libpostal and if necessary, 
 and allowed, geocoders for enrichment of Town Name and Country.
 """
-from typing import Tuple, List
 from collections import defaultdict
 import libpostal_config     #do not delete, must be imported before the postal.parser below
 from postal.parser import parse_address
@@ -26,7 +25,7 @@ class UnstructuredAddress:
     """
 
     @staticmethod
-    def _optimise_libpostal_components(components: List[Tuple[str, str]]) -> dict[str, str]:
+    def _optimise_libpostal_components(components: list[tuple[str, str]]) -> dict[str, str]:
         """
         Processes libpostal components to handle repeating fields optimally.
         Returns the most complete version of each component (we have set to being the longest)
@@ -72,7 +71,7 @@ class UnstructuredAddress:
         raw_fields['address_line'] = prepared_address_line
 
         components = [
-            raw_fields['address_line']
+            raw_fields['address_line'] if raw_fields['address_line'] else None
         ]
 
         # Filter out empty components and join with commas

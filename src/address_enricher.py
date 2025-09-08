@@ -6,8 +6,9 @@ pip install pycountry geopy requests
 """
 import time
 import re
-from typing import Dict, Set, Tuple, Optional, Any, List
+from typing import Optional, Any
 from dataclasses import dataclass
+import json
 import requests
 import pycountry
 from geopy.geocoders import Nominatim
@@ -60,7 +61,7 @@ class AddressEnricher:
         self.base_url = base_url
         self.user_agent = user_agent
         # Get valid ISO 3166-1 alpha-2 country codes from pycountry
-        self.valid_country_codes: Set[str] = {
+        self.valid_country_codes: set[str] = {
             country.alpha_2 for country in pycountry.countries
         }
 
@@ -77,7 +78,7 @@ class AddressEnricher:
     def parse_and_enrich_address(self,
                                 address: str,
                                 country_hint: Optional[str] = None,
-                                return_all_candidates: bool = False) -> List[AddressComponents]:
+                                return_all_candidates: bool = False) -> list[AddressComponents]:
         """
         Parse and enrich an address string using Nominatim geocoding
         
@@ -144,7 +145,7 @@ class AddressEnricher:
 
     def _try_fallback_search(
             self, address: str,
-            return_all_candidates: bool)-> List[AddressComponents]:
+            return_all_candidates: bool)-> list[AddressComponents]:
         """Try search without country restriction if initial search fails"""
 
         self._rate_limit()
@@ -200,6 +201,12 @@ class AddressEnricher:
         # Print available address fields for debugging
         print(f"Available address fields: {list(address_parts.keys())}")
 
+        # Create location dict only if both coordinates are available
+        lat = float(result['lat']) if result.get('lat') else None
+        lng = float(result['lon']) if result.get('lon') else None
+
+        location = {'lat': lat, 'lng': lng} if lat is not None and lng is not None else None
+
         return AddressComponents(
             house_number=address_parts.get('house_number'),
             street_name=address_parts.get('road'),
@@ -211,10 +218,7 @@ class AddressEnricher:
             country_code=address_parts.get('country_code', '').upper(),
             country_name=address_parts.get('country'),
             formatted_address=result.get('display_name'),
-            location={
-                'lat': float(result['lat']) if result.get('lat') else None,
-                'lng': float(result['lon']) if result.get('lon') else None
-            },
+            location=location,
             score=self._calculate_score(result)
         )
 
@@ -304,7 +308,7 @@ class AddressEnricher:
 
     def _identify_enriched_elements(
             self, original: str,
-            components: AddressComponents) -> List[str]:
+            components: AddressComponents) -> list[str]:
         """Identify which elements were enriched/added by geocoding"""
         enriched = []
         original_lower = original.lower()
@@ -477,7 +481,7 @@ class AddressEnricher:
         return None
 
 
-    def _build_search_query(self, address_dict: Dict[str, str], exclude_keys: set = None) -> str:
+    def _build_search_query(self, address_dict: dict[str, str], exclude_keys: set = None) -> str:
         """
         Build a search query from available address components.
         
@@ -592,7 +596,7 @@ class AddressEnricher:
         return None
 
 
-    def address_to_coordinates_nominatim(self, address: str) -> Optional[Tuple[float, float]]:
+    def address_to_coordinates_nominatim(self, address: str) -> Optional[tuple[float, float]]:
         """
         Convert address to lat/lng coordinates using Nominatim
         
@@ -680,7 +684,7 @@ class AddressEnricher:
             return None
 
 
-    def address_to_coordinates_progressive(self, address: str) -> Optional[Tuple[float, float]]:
+    def address_to_coordinates_progressive(self, address: str) -> Optional[tuple[float, float]]:
         """
         Try progressively simpler versions of address to get coordinates
         """
@@ -742,7 +746,7 @@ class AddressEnricher:
 
 
     def get_coordinates_and_country(
-            self, address: str) -> Tuple[Optional[Tuple[float, float]], Optional[str]]:
+            self, address: str) -> tuple[Optional[tuple[float, float]], Optional[str]]:
         """
         Get both coordinates and country for an address
         
@@ -761,7 +765,7 @@ class AddressEnricher:
 
 def geo_enrich_with_nominatim_parsing(
         address_string: str,
-        country_code_hint: str | None) -> Tuple[str | None, str | None, str | None, str | None]:
+        country_code_hint: str | None) -> tuple[str | None, str | None, str | None, str | None]:
     """
     Nominatim address parsing and enrichment 
     
@@ -815,11 +819,11 @@ def geo_enrich_with_nominatim_parsing(
 
 
 def enrich_address(
-    address_dict: Dict[str, str],
+    address_dict: dict[str, str],
     country_code: Optional[str] = None,
     allow_geo_enrichment: bool = True,
     prefer_latin_names: bool = True
-) -> Tuple[Dict[str, str], bool, bool]:
+) -> tuple[dict[str, str], bool, bool]:
     """
     Enrich an address dictionary with missing country and city information.
     If country cannot be enriched, call a reverse geocoder as the final attempt.
