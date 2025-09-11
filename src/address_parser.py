@@ -9,6 +9,7 @@ and allowed, geocoders for enrichment of Town Name and Country.
 from collections import defaultdict
 import libpostal_config     #do not delete, must be imported before the postal.parser below
 from postal.parser import parse_address
+from postal.expand import expand_address
 from log_config import get_logger
 from helpers import clean_whitespace_preserve_newlines
 from config import MIN_VIABLE_ADDRESS_LENGTH
@@ -111,7 +112,19 @@ class UnstructuredAddress:
         raw_fields = {'address_line': address_str.strip()}
 
         libpostal_input = UnstructuredAddress._prepare_for_libpostal(raw_fields)
+
+
+        # Libpostal - parse first
         libpostal_parsed = parse_address(libpostal_input)
+        #print(libpostal_parsed)
+
+        # Libpostal - expand then parse
+        #expanded = expand_address(libpostal_input, languages=['en', 'us'])
+        #print(expanded)
+        # best_expanded = expanded[0]
+        # reparsed = parse_address(best_expanded)
+        # print(reparsed)
+
         optimised_components = UnstructuredAddress._optimise_libpostal_components(libpostal_parsed)
 
         country_code = optimised_components.get('country')

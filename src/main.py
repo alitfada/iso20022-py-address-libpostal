@@ -82,6 +82,7 @@ class AddressProcessor:
         start_row: int = 1,  # 1 assumes no header row
         allow_hybrid: bool = False,
         allow_geo_enrichment: bool = False,
+        log_interval: int = 1000
         ) -> pd.DataFrame:
         """
         Process addresses from a Text file (one address per row) each line
@@ -95,20 +96,33 @@ class AddressProcessor:
             allow_hybrid:  allows the fallback to a hybrid address to minimise truncation
             allow_geo_enrichment: if town name and country code are missing, allows
                 these to be enriched using geocoders
-
+            log_interval: interval to log in batches for performance improvement
         Returns:
             DataFrame with original addresses and parsed components
         """
         try:
             parsed_data = []
 
-            # Read Text file
-            print(f"Reading text file: {file_path}")
-            logger.info("Reading text file: %s", file_path)
-
             expected_lengths = {AddressType.UNSTRUCTURED: 2000}  # Arbitrary long length
 
-            trim_for_parsing = False  # Whether to trim whitespace for parsing
+            # Cache frequently used values
+            expected_length = expected_lengths.get(address_type)
+            trim_for_parsing = False # Whether to trim whitespace for parsing
+            address_type_value = address_type.value
+
+            # Create parser dispatch dictionary to avoid if-elif chain, should
+            # this class / strategy be extended
+            parser_map = {
+                AddressType.UNSTRUCTURED: lambda line: UnstructuredAddress.parse_address(
+                    address_str=line, allow_geo_enrichment=allow_geo_enrichment
+                    ),
+                }
+
+            parser_func = parser_map[address_type]
+
+            # Read Text file
+            print(f"Reading Text file: {file_path}")
+            logger.info("Reading Text file: %s", file_path)
 
             # Open the file and process line by line
             with open(file_path, "r", encoding="utf-8") as file:
@@ -119,79 +133,69 @@ class AddressProcessor:
                 # Process remaining lines
                 for line_num, line in enumerate(file, start=start_row):
 
-                    if not line.rstrip("\n"):  # Skip empty lines
+                    stripped_line = line.rstrip('\n')
+                    if not stripped_line:  # Skip empty lines
                         logger.warning("Line %s is empty - skipped", line_num)
                         continue
 
+                    # Batch logging for performance
+                    if line_num % log_interval == 0:
+                        print(f"Processed {line_num} lines...")
+                        logger.info("Processed %s lines", line_num)
+
                     try:
-                        msg = f"Line {line_num} processing"
-                        logger.info(msg)
-                        print(msg)
-                        # Preserve original for length check
-                        original_line = line
-                        # Only strip newline
-                        actual_length = len(line.rstrip("\n"))
+                        # Pre-calculate length operations
+                        actual_length = len(stripped_line)
+                        original_line = stripped_line  # Already stripped
 
-                        # Determine effective parser (this code only has UNSTRUCTURED defined)
-                        effective_address_type = address_type
-                        if address_type in expected_lengths:
-                            expected_length = expected_lengths[address_type]
-                            if actual_length > expected_length:
-                                logger.warning(
-                                    "TRUNCATION POSSIBLE: Line %s: Expected %s chars, got %s. "
-                                    "This is truncated: %s",
-                                    line_num,
-                                    expected_length,
-                                    actual_length,
-                                    original_line[expected_length:]
-                                )
-                                original_line = original_line[:expected_length]
-
-                        # Prepare line for parsing (conditional trim)
-                        parse_line = original_line.rstrip("\n")
-                        if trim_for_parsing:
-                            parse_line = parse_line.strip()
-
-                        # Parse using appropriate handler
-                        if effective_address_type == AddressType.UNSTRUCTURED:
-                            (
-                                raw_fields,
-                                optimised_libpostal_fields,
-                                best_address_components,
-                                city_enriched,
-                                country_enriched
-                            ) = UnstructuredAddress.parse_address(
-                                address_str=parse_line,
-                                allow_geo_enrichment=allow_geo_enrichment
+                        # Handle truncation if needed
+                        if expected_length and actual_length > expected_length:
+                            logger.warning(
+                                "TRUNCATION POSSIBLE: Line %s: Expected %s chars, got %s. "
+                                "Truncated: %s",
+                                line_num, expected_length, actual_length,
+                                original_line[expected_length:]
                             )
+                            original_line = original_line[:expected_length]
 
+                        # Prepare parsing line
+                        parse_line = original_line.strip() if trim_for_parsing else original_line
+
+                        # Use dispatch table instead of if-elif chain
+                        result = parser_func(parse_line)
+
+                        # Handle different return patterns efficiently
+                        if len(result) == 2:
+                            raw_fields, optimised_libpostal_fields = result
+                            best_address_components = city_enriched = country_enriched = None
+                        else:  # len(result) == 5
+                            (raw_fields, optimised_libpostal_fields,
+                            best_address_components, city_enriched, country_enriched) = result
+
+                        # Build entry dictionary efficiently
                         entry = {
-                            "address_type": effective_address_type.value,
-                            "original_address_type": address_type.value,
-                            "expected_length": expected_lengths.get(address_type),
+                            "address_type": address_type_value,
+                            "original_address_type": address_type_value,
+                            "expected_length": expected_length,
                             "actual_length": actual_length,
-                            "is_length_valid": actual_length
-                            == expected_lengths.get(address_type, actual_length),
+                            "is_length_valid": actual_length == expected_length if expected_length else True,
                             "allow_hybrid": allow_hybrid,
                             "allow_geo_enrichment": allow_geo_enrichment,
-                            "raw_address": original_line.rstrip("\n"),
+                            "raw_address": stripped_line,
                         }
 
-                        try:
-                            if raw_fields is not None:
-                                entry["raw_address_data"] = raw_fields
-                            if optimised_libpostal_fields is not None:
-                                entry["libpostal_data"] = optimised_libpostal_fields
-                            if best_address_components is not None:
-                                entry["best_address"] = best_address_components
-                            if city_enriched is not None:
-                                entry["city_enriched"] = city_enriched
-                            if country_enriched is not None:
-                                entry["country_enriched"] = country_enriched
-                        except NameError as e:
-                            logger.error("Fields missing: %s", e)
+                        # Add optional fields only if they exist
+                        if raw_fields is not None:
+                            entry["raw_address_data"] = raw_fields
+                        if optimised_libpostal_fields is not None:
+                            entry["libpostal_data"] = optimised_libpostal_fields
+                        if best_address_components is not None:
+                            entry["best_address"] = best_address_components
+                        if city_enriched is not None:
+                            entry["city_enriched"] = city_enriched
+                        if country_enriched is not None:
+                            entry["country_enriched"] = country_enriched
 
-                        # Store the various results with metadata
                         parsed_data.append(entry)
 
                     except (ValueError, KeyError, TypeError) as e:
@@ -200,11 +204,14 @@ class AddressProcessor:
 
         except (IOError, OSError, ValueError) as e:
             logger.error("Error: %s", str(e))
-            return pd.DataFrame()  # Return empty DataFrame on error
+            return pd.DataFrame()
 
-        # Convert to DataFrame and expand the 'parsed_fields' dict into columns
+        # Final progress log
+        print(f"Completed processing {len(parsed_data)} lines")
+        logger.info("Completed processing %s lines", len(parsed_data))
+
+        # Convert to DataFrame
         df = pd.json_normalize(parsed_data)
-
         return df
 
 
