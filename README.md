@@ -38,7 +38,8 @@ expect it in a certain order).
 Each address is normalised after the libpostal parsing (and optional geo-enrichment), to conform
 to the CBPR+ extended character set and each element truncated, if neccessary, to fit the permitted
 field lengths.  Truncation will always be indicated with an appended + symbol at the end of the field.
-Any address that is altered in these ways will be flagged as is_replaced=True and/or is_truncated=True
+Any address that is altered in these ways will be flagged as *is_replaced=True* and/or *is_truncated=True*
+Any address that has been ge0-enrich will be flagged as *city_enriched=True* and/or *country_enriched=True*.
 
 Finally, the converted address is validated against the loaded xsds, either structured or hybrid.
 
@@ -59,15 +60,15 @@ pip install -r requirements.txt
 
 Libpostal should be installed and configured on WSL. A simple guide to WSL and Libpostal is:
 
-[text](https://affinis.co.uk/libpostal-installation-and-configuration-on-wsl/)
+[Affinis Installation Guide for WSL and Libpostal](https://affinis.co.uk/libpostal-installation-and-configuration-on-wsl/)
 
 Github for Libpostal is:
 
-[text](https://github.com/openvenues/libpostal)
+[Github Openvenues Libpostal](https://github.com/openvenues/libpostal)
 
 Once installed, upgrade to the Senzing model.
 
-[text](https://github.com/Senzing/libpostal-data)
+[Github Senzing Libpostal](https://github.com/Senzing/libpostal-data)
 
 ## Configuration
 
@@ -77,20 +78,20 @@ configuration as required.
 
 ### Libpostal Data Directory
 This python application needs to know the libpostal data directory.
-The following code is towards the beginning og the main.py file.  Edit the location to point to your
+The following code is found in the *libpostal_config.py* file.  Edit the location to point to your
 libpostal data directory
 
 ```sh
-# Configure libpostal data directory before any postal imports
+# Edit this to your libpostal data directory, if not this
 os.environ['LIBPOSTAL_DATA_DIR'] = '/usr/local/share/libpostal'
 ```
 
 ## Logging
-This application will log events in a file called application.log found in the same location as the output csv file.  The *log_config.py* can be edited to adjust the logging.  It is currently set to max log file size of 15Mb and when exceeded, a new log file is created, up to a maxiumum of 10 log files.  Be aware that some address data may be written to the log file, such as address data that will be truncated.  
+This application will log events in a file called *application.log* found in the same location as the output csv file.  The *log_config.py* can be edited to adjust the logging.  It is currently set to max log file size of 15Mb and when exceeded, a new log file is created, up to a maxiumum of 10 log files.  Be aware that some address data may be written to the log file, such as address data that will be truncated.  
 
 ## Use of Gecoders
 Banks, payment service providers and other money movers, have several regulatory obligation, such as the Funds Transer Regulations and a plethora of sanctions, AML and KYC related checks.  Using a geocoder to enrich what is likely to be an otherwise inadequate address, one that could not readily identify the location of the party involved in the payment, may conflict with the requirement to have undertaken due diligence and comply with the various regulations.  If the address is too sparsely populated to produce a valid ISO 20022 structured address, the priority should be to make improvements/corrections at source, then retry.  Geocoders should only be used where source correction either cannot be completed or has no effect - it should be considered a fallback and best reserved for the creditor address, never the debtor address (i.e. your customer, where KYC should be the path to data improvement).
 
 ## Author and Contact
-Dominic Digby 
-info@affinis.co.uk
+Dominic Digby
+Contact me via LinkedIn
