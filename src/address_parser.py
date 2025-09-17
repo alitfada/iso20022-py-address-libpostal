@@ -30,26 +30,34 @@ class UnstructuredAddress:
         """
         Processes libpostal components to handle repeating fields optimally.
         Returns the most complete version of each component (we have set to being the longest)
+        Optimised for a single pass
         """
-        component_map = defaultdict(list)
-
-        # Group all components by their type
-        for value, component_type in components:
-            component_map[component_type].append(value)
+        if not components:
+            return {}
 
         optimised = {}
 
-        # For each component type, select the most complete version
-        for comp_type, values in component_map.items():
-            if len(values) == 1:
-                optimised[comp_type] = values[0]
+        # Single pass - track best value for each component type
+        for value, component_type in components:
+            if component_type not in optimised:
+                optimised[component_type] = value
             else:
-                # For multiple values, use the longest that contains meaningful info
-                sorted_values = sorted(values, key=lambda x: (-len(x), x))
-                optimised[comp_type] = next(
-                    (v for v in sorted_values if v.strip()),
-                    sorted_values[0]  # fallback
-                )
+                # Compare with existing value
+                existing = optimised[component_type]
+
+                # Quick length comparison first (most common case)
+                if len(value) > len(existing):
+                    optimised[component_type] = value
+                elif len(value) == len(existing):
+                    # Same length - prefer non-empty stripped version
+                    value_stripped = value.strip()
+                    existing_stripped = existing.strip()
+
+                    if len(value_stripped) > len(existing_stripped):
+                        optimised[component_type] = value
+                    elif len(value_stripped) == len(existing_stripped) and value < existing:
+                        # Lexicographic tie-breaker for consistency
+                        optimised[component_type] = value
 
         return optimised
 
