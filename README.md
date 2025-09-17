@@ -94,4 +94,4 @@ Banks, payment service providers and other money movers, have several regulatory
 
 ## Author and Contact
 Dominic Digby
-Contact me via LinkedIn
+[Contact me via LinkedIn](https://www.linkedin.com/in/dominicdigby/)
