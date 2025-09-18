@@ -868,7 +868,7 @@ def enrich_address(
                         country_code_from_name)
 
     # Recheck if country_code is now 2 chars
-    if current_country and len(current_country) != 2:
+    if not current_country or len(current_country) != 2:
         # Check for city / state, i.e if no country code but city is Singapore or Monaco
         # then return the country code relavent to this (doesn't require geoenrichment)
         if country_code := enricher._get_country_code_from_name(enriched_address['city']):
