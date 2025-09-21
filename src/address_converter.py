@@ -19,7 +19,7 @@ import xml.etree.ElementTree as ET
 from xml.dom import minidom
 import re
 import unicodedata
-from typing import Dict, Tuple, List, Set, Optional
+from typing import Optional
 import pandas as pd
 from lxml import etree
 from log_config import get_logger
@@ -40,8 +40,11 @@ class AddressConverter:
 
         # Field mapping from libpostal to PostalAddress24
         self.field_mappings = {
-            # House name can go to Dept or SubDept or BldgNm
-            "house": ["Dept", "SubDept", "BldgNm"],
+            # department and sub_department are extensions to Libposal model
+            # and for future use if needed in a strategy
+            "department": ["Dept"],
+            "sub_department": ["SubDept"],
+            "house": ["BldgNm"],
             "house_number": ["BldgNb"],
             "level": ["Flr"],
             "po_box": ["PstBx"],
@@ -74,7 +77,7 @@ class AddressConverter:
         }
 
 
-    def normalize_text(self, text: str) -> Tuple[str, bool]:
+    def normalize_text(self, text: str) -> tuple[str, bool]:
         """
         Normalize text to CBPR+ compliant format
         Returns: (normalized_text, is_altered)
@@ -88,7 +91,7 @@ class AddressConverter:
 
         # Remove accents and normalize to ASCII
         try:
-            # Unicodedata does't replace "œ", "æ", "ß" etc so replace first before NFKD
+            # Unicodedata doens't replace "œ", "æ", "ß" etc so replace first before NFKD
             text = text.replace("œ", "oe")
             text = text.replace("æ", "ae")
             text = text.replace("ß", "ss")
@@ -128,7 +131,7 @@ class AddressConverter:
         return normalised_text, is_altered or (normalised_text != original_text)
 
 
-    def truncate_field(self, text: str, max_length: int) -> Tuple[str, bool]:
+    def truncate_field(self, text: str, max_length: int) -> tuple[str, bool]:
         """
         Truncate text to maximum length -1 plus + char to show truncation
         Returns: (truncated_text, is_altered)
@@ -138,7 +141,7 @@ class AddressConverter:
 
         if len(text) > max_length:
             return text[: max_length - 1] + "+", True
-        
+
         return text, False
 
 
@@ -184,13 +187,15 @@ class AddressConverter:
         return (address_line_1, truncated_address_line2, truncated)
 
 
-    def extract_address_components(self, row: pd.Series) -> Dict[str, str]:
+    def extract_address_components(self, row: pd.Series) -> dict[str, str]:
         """
         Extract address components from DataFrame row
         """
         components = {}
 
         field_mappings = {
+            "department": "department",
+            "sub_department": "sub_department",
             "house": "house",
             "house_number": "house_number",
             "road": "road",
@@ -221,8 +226,8 @@ class AddressConverter:
 
 
     def build_structured_address(
-        self, components: Dict[str, str]
-    ) -> Tuple[Dict[str, str], Dict[str, str], bool, bool, bool]:
+        self, components: dict[str, str]
+    ) -> tuple[dict[str, str], dict[str, str], bool, bool, bool]:
         """
         Build PostalAddress24 structured format
         Returns: (address_fields_trunc (truncated to fit structured),
@@ -262,6 +267,8 @@ class AddressConverter:
 
         # Optional fields
         optional_mappings = {
+            "department": "Dept",
+            "sub_department": "SubDept",
             "road": "StrtNm",
             "house_number": "BldgNb",
             "house": "BldgNm",
@@ -329,9 +336,9 @@ class AddressConverter:
 
     def build_hybrid_address(
         self,
-        address_fields_no_trunc: Dict[str, str],
+        address_fields_no_trunc: dict[str, str],
         structured_replaced: bool
-    ) -> Tuple[Dict[str, str], bool, bool]:
+    ) -> tuple[dict[str, str], bool, bool]:
         """
         Build PostalAddress24 hybrid format (with AdrLine fields)
         Returns: (address_fields, is_replaced, is_truncated)
@@ -391,7 +398,7 @@ class AddressConverter:
 
 
     def remove_duplicate_elements(
-        self, xml_element, protected_tags: Optional[List[str]] = None
+        self, xml_element, protected_tags: Optional[list[str]] = None
     ) -> etree._Element:
         """
         Remove duplicate elements from XML while protecting certain tags from being removed,
@@ -407,7 +414,7 @@ class AddressConverter:
         if protected_tags is None:
             protected_tags = ["TwnNm", "Ctry"]
 
-        seen_values: Set[str] = set()
+        seen_values: set[str] = set()
         elements_to_remove = []
 
         # First pass: Record values from protected tags
@@ -449,7 +456,7 @@ class AddressConverter:
 
 
     def create_xml_element(
-        self, address_fields: Dict[str, str], allow_hybrid: bool = False
+        self, address_fields: dict[str, str], allow_hybrid: bool = False
     ) -> ET.Element:
         """
         Create XML element for the address
@@ -492,7 +499,7 @@ class AddressConverter:
 
     def validate_xml_against_xsd(
         self, xml_element: ET.Element, xsd_content: str
-    ) -> Tuple[bool, List[str]]:
+    ) -> tuple[bool, list[str]]:
         """
         Validate XML against XSD schema
         Returns: (is_valid, error_messages)
